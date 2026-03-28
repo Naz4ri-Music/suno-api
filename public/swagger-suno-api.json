@@ -741,6 +741,121 @@
         }
       }
     },
+    "/api/uploads/audio/{audio_id}/initialize-clip": {
+      "post": {
+        "summary": "Initialize an uploaded audio as a clip.",
+        "description": "Wraps Suno's upload initialization endpoint and returns the generated `clip_id` for a completed uploaded audio.",
+        "tags": ["default"],
+        "parameters": [
+          {
+            "name": "audio_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "clip_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gen/{clip_id}/set_metadata": {
+      "post": {
+        "summary": "Set clip metadata.",
+        "description": "Wraps Suno's clip metadata endpoint.",
+        "tags": ["default"],
+        "parameters": [
+          {
+            "name": "clip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "image_url": {
+                    "type": "string"
+                  },
+                  "is_audio_upload_tos_accepted": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "success"
+          }
+        }
+      }
+    },
+    "/api/gen/{clip_id}/set_audio_description": {
+      "post": {
+        "summary": "Set or accept audio description.",
+        "description": "Wraps Suno's audio description endpoint. If no body is sent, the API defaults to `{ \"gemini_description_accepted\": true }`.",
+        "tags": ["default"],
+        "parameters": [
+          {
+            "name": "clip_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "gemini_description_accepted": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "success"
+          }
+        }
+      }
+    },
     "/api/move_clip": {
       "post": {
         "summary": "Move clips to a workspace.",

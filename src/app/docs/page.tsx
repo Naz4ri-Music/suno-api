@@ -36,6 +36,9 @@ export default function Docs() {
 - \`/api/persona\`: Get persona information and clips based on ID and page number
 - \`/api/upload_audio\`: Low-level audio upload to Suno. Returns upload processing info only
 - \`/api/upload_file\`: Full async upload workflow. Returns a \`work_id\` and lets you poll each step/output
+- \`/api/uploads/audio/{audio_id}/initialize-clip\`: Initialize an uploaded audio into a clip in the account
+- \`/api/gen/{clip_id}/set_metadata\`: Set metadata for a clip
+- \`/api/gen/{clip_id}/set_audio_description\`: Accept or update the generated audio description for a clip
 - \`/api/move_clip\`: Move one or more clips to a workspace by id or name
 - \`/api/workspace_feed\`: Read the feed/clips of a workspace by id or name
 - \`/api/generate_from_audio\`: Generate from an existing audio clip in cover, add vocals or add instrumental mode

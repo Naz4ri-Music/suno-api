@@ -1167,12 +1167,13 @@ class SunoApi {
   }
 
   public async acceptAudioDescription(
-    clipId: string
+    clipId: string,
+    payload: Record<string, any> = { gemini_description_accepted: true }
   ): Promise<any> {
     await this.keepAlive(false);
     const response = await this.client.post(
       `${SunoApi.BASE_URL}/api/gen/${clipId}/set_audio_description`,
-      { gemini_description_accepted: true }
+      payload
     );
 
     return response.data;
