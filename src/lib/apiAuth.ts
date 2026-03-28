@@ -4,11 +4,22 @@ import { corsHeaders } from '@/lib/utils';
 export const MISSING_SUNO_COOKIE_ERROR =
   'Missing suno_cookie. Provide `suno_cookie` in the request or configure SUNO_COOKIE in the environment.';
 
+function decodeCookieValue(value: string): string {
+  if (!/%[0-9A-Fa-f]{2}/.test(value))
+    return value;
+
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 function normalizeCookieValue(value: unknown): string | null {
   if (typeof value !== 'string')
     return null;
 
-  const normalized = value.trim();
+  const normalized = decodeCookieValue(value.trim());
   return normalized.length > 0 ? normalized : null;
 }
 

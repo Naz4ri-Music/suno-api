@@ -1309,8 +1309,24 @@ class SunoApi {
   }
 }
 
+const decodeCookieValue = (value?: string | null) => {
+  if (!value)
+    return value ?? '';
+
+  const trimmed = value.trim();
+  if (!/%[0-9A-Fa-f]{2}/.test(trimmed))
+    return trimmed;
+
+  try {
+    return decodeURIComponent(trimmed);
+  } catch {
+    return trimmed;
+  }
+};
+
 export const sunoApi = async (cookie?: string) => {
-  const resolvedCookie = cookie?.trim() || process.env.SUNO_COOKIE;
+  const resolvedCookie =
+    decodeCookieValue(cookie) || decodeCookieValue(process.env.SUNO_COOKIE);
   if (!resolvedCookie) {
     logger.info('No cookie provided! Aborting...\nPlease provide `suno_cookie` in the request or set SUNO_COOKIE in the .env file.')
     throw new Error('Please provide `suno_cookie` in the request or set SUNO_COOKIE in the .env file.');
