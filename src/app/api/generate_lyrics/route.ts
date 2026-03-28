@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from "next/server";
-import { cookies } from 'next/headers'
+import { missingSunoCookieResponse, resolveSunoCookie } from "@/lib/apiAuth";
 import { sunoApi } from "@/lib/SunoApi";
 import { corsHeaders } from "@/lib/utils";
 
@@ -10,8 +10,11 @@ export async function POST(req: NextRequest) {
     try {
       const body = await req.json();
       const { prompt } = body;
+      const sunoCookie = resolveSunoCookie(req, body);
+      if (!sunoCookie)
+        return missingSunoCookieResponse();
 
-      const lyrics = await (await sunoApi((await cookies()).toString())).generateLyrics(prompt);
+      const lyrics = await (await sunoApi(sunoCookie)).generateLyrics(prompt);
 
       return new NextResponse(JSON.stringify(lyrics), {
         status: 200,

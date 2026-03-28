@@ -5,9 +5,19 @@ services:
     build:
       context: .
       args:
-        SUNO_COOKIE: ${SUNO_COOKIE}
+        APP_BASE_PATH: ${APP_BASE_PATH:-}
     volumes:
       - ./public:/app/public
     ports:
-      - "3000:3000"
+      - "${DOCKER_BIND_HOST:-127.0.0.1}:${DOCKER_HOST_PORT:-3000}:${PORT:-3000}"
+    environment:
+      HOST: ${HOST:-0.0.0.0}
+      PORT: ${PORT:-3000}
+      APP_BASE_PATH: ${APP_BASE_PATH:-}
+      SUNO_COOKIE: ${SUNO_COOKIE:-}
+      TWOCAPTCHA_KEY: ${TWOCAPTCHA_KEY:-}
+      BROWSER: ${BROWSER:-chromium}
+      BROWSER_GHOST_CURSOR: ${BROWSER_GHOST_CURSOR:-false}
+      BROWSER_LOCALE: ${BROWSER_LOCALE:-en}
+      BROWSER_HEADLESS: ${BROWSER_HEADLESS:-true}
     env_file: ".env"

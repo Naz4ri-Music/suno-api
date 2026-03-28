@@ -1,4 +1,5 @@
 import { NextResponse, NextRequest } from "next/server";
+import { missingSunoCookieResponse, resolveSunoCookie } from "@/lib/apiAuth";
 import { sunoApi } from "@/lib/SunoApi";
 import { corsHeaders } from "@/lib/utils";
 
@@ -22,7 +23,11 @@ export async function GET(req: NextRequest) {
       }
 
       const pageNumber = page ? parseInt(page) : 1;
-      const personaInfo = await (await sunoApi()).getPersonaPaginated(personaId, pageNumber);
+      const sunoCookie = resolveSunoCookie(req);
+      if (!sunoCookie)
+        return missingSunoCookieResponse();
+
+      const personaInfo = await (await sunoApi(sunoCookie)).getPersonaPaginated(personaId, pageNumber);
 
       return new NextResponse(JSON.stringify(personaInfo), {
         status: 200,

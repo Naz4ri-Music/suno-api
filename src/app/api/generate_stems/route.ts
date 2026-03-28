@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
-import { cookies } from 'next/headers';
-import { DEFAULT_MODEL, sunoApi } from "@/lib/SunoApi";
+import { missingSunoCookieResponse, resolveSunoCookie } from "@/lib/apiAuth";
+import { sunoApi } from "@/lib/SunoApi";
 import { corsHeaders } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,11 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      const audioInfo = await (await sunoApi((await cookies()).toString()))
+      const sunoCookie = resolveSunoCookie(req, body);
+      if (!sunoCookie)
+        return missingSunoCookieResponse();
+
+      const audioInfo = await (await sunoApi(sunoCookie))
         .generateStems(audio_id);
 
       return new NextResponse(JSON.stringify(audioInfo), {

@@ -84,14 +84,16 @@ You can choose your preferred deployment method:
 git clone https://github.com/gcui-art/suno-api.git
 cd suno-api
 npm install
+cp .env.example .env
 ```
 #### Docker
 >[!IMPORTANT]
 > GPU acceleration will be disabled in Docker. If you have a slow CPU, it is recommended to [deploy locally](#run-locally).
 
-Alternatively, you can use [Docker Compose](https://docs.docker.com/compose/). However, follow the step below before running.
+Alternatively, you can use [Docker Compose](https://docs.docker.com/compose/). Copy the example env file first and adjust the published host/port if needed.
 
 ```bash
+cp .env.example .env
 docker compose build && docker compose up
 ```
 
@@ -101,12 +103,17 @@ docker compose build && docker compose up
 
 - If you’re running this locally, be sure to add the following to your `.env` file:
 #### Environment variables
-- `SUNO_COOKIE` — the `Cookie` header you obtained in the first step.
+- `SUNO_COOKIE` — the `Cookie` header you obtained in the first step. Optional if you prefer sending `suno_cookie` per request.
 - `TWOCAPTCHA_KEY` — your 2Captcha API key from the second step.
 - `BROWSER` — the name of the browser that is going to be used to solve the CAPTCHA. Only `chromium` and `firefox` supported.
 - `BROWSER_GHOST_CURSOR` — use ghost-cursor-playwright to simulate smooth mouse movements. Please note that it doesn't seem to make any difference in the rate of CAPTCHAs, so you can set it to `false`. Retained for future testing.
 - `BROWSER_LOCALE` — the language of the browser. Using either `en` or `ru` is recommended, since those have the most workers on 2Captcha. [List of supported languages](https://2captcha.com/2captcha-api#language)
 - `BROWSER_HEADLESS` — run the browser without the window. You probably want to set this to `true`.
+- `HOST` — host/interface where Next.js binds. Recommended `127.0.0.1` locally and `0.0.0.0` in Docker.
+- `PORT` — port where the app listens.
+- `APP_BASE_PATH` — base path where the app is exposed. Default is `/`, which is represented by leaving this variable empty. If you serve the app behind a reverse proxy under a subpath such as `/tools/suno-api`, this value must be set before `npm run build` or `docker compose build`.
+- `DOCKER_BIND_HOST` — only for Docker Compose. Host interface where the container port is published.
+- `DOCKER_HOST_PORT` — only for Docker Compose. Host port published by Docker.
 ```bash
 SUNO_COOKIE=<…>
 TWOCAPTCHA_KEY=<…>
@@ -114,6 +121,11 @@ BROWSER=chromium
 BROWSER_GHOST_CURSOR=false
 BROWSER_LOCALE=en
 BROWSER_HEADLESS=true
+HOST=127.0.0.1
+PORT=3000
+APP_BASE_PATH=
+DOCKER_BIND_HOST=127.0.0.1
+DOCKER_HOST_PORT=3000
 ```
 
 ### 5. Run suno-api
@@ -122,8 +134,16 @@ BROWSER_HEADLESS=true
   - Please click on Deploy in the Vercel dashboard and wait for the deployment to be successful.
   - Visit the `https://<vercel-assigned-domain>/api/get_limit` API for testing.
 - If running locally:
-  - Run `npm run dev`.
-  - Visit the `http://localhost:3000/api/get_limit` API for testing.
+  - Development: run `npm run dev`.
+  - Production-like: run `npm run build && npm run start`.
+  - You can override binding with `HOST` and `PORT`, for example: `HOST=127.0.0.1 PORT=4000 npm run dev`.
+  - If you use a subpath via reverse proxy, set `APP_BASE_PATH` before building and keep the same value at runtime.
+  - Visit `http://<HOST>:<PORT><APP_BASE_PATH>/api/get_limit` for testing. If `APP_BASE_PATH` is empty, this becomes `http://<HOST>:<PORT>/api/get_limit`.
+- If running with Docker Compose:
+  - Configure `HOST`, `PORT`, `APP_BASE_PATH`, `DOCKER_BIND_HOST`, and `DOCKER_HOST_PORT` in `.env` as needed.
+  - Example: `HOST=0.0.0.0`, `PORT=3001`, `APP_BASE_PATH=/tools/suno-api`, `DOCKER_BIND_HOST=127.0.0.1`, `DOCKER_HOST_PORT=3001`.
+  - Then run `docker compose up --build`.
+  - Visit `http://<DOCKER_BIND_HOST>:<DOCKER_HOST_PORT><APP_BASE_PATH>/api/get_limit`.
 - If the following result is returned:
 
 ```json
@@ -136,6 +156,72 @@ BROWSER_HEADLESS=true
 ```
 
 it means the program is running normally.
+
+### Reverse proxy and PM2
+
+If you want to serve the app behind nginx under a subpath such as `/tools/suno-api`, set the same `APP_BASE_PATH` value for both the build and the runtime. The easiest approach is to place it in `.env`, because:
+
+- `npm run build` will use it when Next.js generates the app.
+- `npm run start` will use it for `HOST` and `PORT`.
+- `pm2 start ecosystem.config.cjs` will read the same `.env` file and use the same values.
+
+If `APP_BASE_PATH` is empty, the app is served from `/`.
+
+Example `.env` for your nginx setup:
+
+```bash
+HOST=127.0.0.1
+PORT=8015
+APP_BASE_PATH=/tools/suno-api
+SUNO_COOKIE=<…>
+TWOCAPTCHA_KEY=<…>
+BROWSER=chromium
+BROWSER_GHOST_CURSOR=false
+BROWSER_LOCALE=en
+BROWSER_HEADLESS=true
+```
+
+Build and run without Docker:
+
+```bash
+npm install
+npm run build
+pm2 start ecosystem.config.cjs
+```
+
+With the example above, the external health-check URL will be `https://<your-domain>/tools/suno-api/api/get_limit`.
+
+PM2 fallbacks are intentionally generic:
+
+- `HOST=127.0.0.1`
+- `PORT=8015`
+- `APP_BASE_PATH=` which means `/`
+
+nginx example:
+
+```nginx
+location ^~ /tools/suno-api {
+    auth_basic "Suno API";
+    auth_basic_user_file /etc/nginx/.htpasswd-stems;
+
+    client_max_body_size 250M;
+
+    proxy_pass http://127.0.0.1:8015;
+    proxy_http_version 1.1;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Forwarded-Host  $host;
+    proxy_set_header X-Forwarded-Port  $server_port;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header Upgrade           $http_upgrade;
+    proxy_set_header Connection        "upgrade";
+
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+}
+```
+
+If you later change the external path, rebuild the app with the new `APP_BASE_PATH` before restarting PM2 or rebuilding the Docker image.
 
 ### 6. Use Suno API
 
@@ -161,7 +247,7 @@ Suno API currently mainly implements the following APIs:
 - `/api/concat`: Generate the whole song from extensions
 ```
 
-You can also specify the cookies in the `Cookie` header of your request, overriding the default cookies in the `SUNO_COOKIE` environment variable. This comes in handy when, for example, you want to use multiple free accounts at the same time.
+You can also specify `suno_cookie` per request, overriding the default cookies in the `SUNO_COOKIE` environment variable. This works in JSON bodies, query string, `multipart/form-data`, or the headers `x-suno-cookie` / `suno-cookie`. This comes in handy when, for example, you want to use multiple accounts at the same time.
 
 For more detailed documentation, please check out the demo site:
 [suno.gcui.ai/docs](https://suno.gcui.ai/docs)

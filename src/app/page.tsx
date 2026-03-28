@@ -1,5 +1,6 @@
 import Section from "./components/Section";
 import Markdown from 'react-markdown';
+import { withBasePath } from "@/lib/appConfig";
 
 
 export default function Home() {
@@ -141,7 +142,7 @@ For more detailed documentation, please check out the demo site:
             {markdown}
           </Markdown>
           <video controls width="1024" className="w-full border rounded-lg shadow-xl">
-            <source src="/get-cookie-demo.mp4" type="video/mp4" />
+            <source src={withBasePath('/get-cookie-demo.mp4')} type="video/mp4" />
             Your browser does not support frames.
           </video>
           <Markdown>

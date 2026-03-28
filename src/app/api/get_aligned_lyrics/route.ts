@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from "next/server";
-import { cookies } from 'next/headers'
+import { missingSunoCookieResponse, resolveSunoCookie } from "@/lib/apiAuth";
 import { sunoApi } from "@/lib/SunoApi";
 import { corsHeaders } from "@/lib/utils";
 
@@ -21,7 +21,11 @@ export async function GET(req: NextRequest) {
         });
       }
 
-      const lyricAlignment = await (await sunoApi((await cookies()).toString())).getLyricAlignment(song_id);
+      const sunoCookie = resolveSunoCookie(req);
+      if (!sunoCookie)
+        return missingSunoCookieResponse();
+
+      const lyricAlignment = await (await sunoApi(sunoCookie)).getLyricAlignment(song_id);
 
 
       return new NextResponse(JSON.stringify(lyricAlignment), {

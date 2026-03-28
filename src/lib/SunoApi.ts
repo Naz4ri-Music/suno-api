@@ -19,6 +19,7 @@ globalForSunoApi.sunoApiCache = cache;
 
 const logger = pino();
 export const DEFAULT_MODEL = 'chirp-v3-5';
+export const DEFAULT_AUDIO_TO_AUDIO_MODEL = 'chirp-fenix';
 
 export interface AudioInfo {
   id: string; // Unique identifier for the audio
@@ -38,6 +39,30 @@ export interface AudioInfo {
   duration?: string; // Duration of the audio
   error_message?: string; // Error message if any
 }
+
+export interface WorkspaceInfo {
+  id: string;
+  name: string;
+  description?: string;
+  clip_count?: number;
+  last_updated_clip?: string;
+  shared?: boolean;
+  created_at?: string;
+}
+
+export interface UploadedAudioInfo {
+  id: string;
+  status: string;
+  s3_id?: string;
+  title?: string;
+  image_url?: string;
+  has_vocal?: boolean;
+  display_tags?: string;
+  inferred_description?: string;
+  error_message?: string;
+}
+
+export type AudioToAudioMode = 'cover' | 'add_vocals' | 'add_instrumental';
 
 interface PersonaResponse {
   persona: {
@@ -90,18 +115,23 @@ class SunoApi {
       withCredentials: true,
       headers: {
         'Affiliate-Id': 'undefined',
-        'Device-Id': `"${this.deviceId}"`,
+        'Device-Id': `${this.deviceId}`,
+        'Browser-Token': this.getBrowserToken(),
         'x-suno-client': 'Android prerelease-4nt180t 1.0.42',
         'X-Requested-With': 'com.suno.android',
         'sec-ch-ua': '"Chromium";v="130", "Android WebView";v="130", "Not?A_Brand";v="99"',
         'sec-ch-ua-mobile': '?1',
         'sec-ch-ua-platform': '"Android"',
-        'User-Agent': this.userAgent
+        'User-Agent': this.userAgent,
+        Accept: '*/*',
+        Origin: 'https://suno.com',
+        Referer: 'https://suno.com/'
       }
     });
     this.client.interceptors.request.use(config => {
       if (this.currentToken && !config.headers.Authorization)
         config.headers.Authorization = `Bearer ${this.currentToken}`;
+      config.headers['Browser-Token'] = this.getBrowserToken();
       const cookiesArray = Object.entries(this.cookies).map(([key, value]) => 
         cookie.serialize(key, value as string)
       );
@@ -118,6 +148,12 @@ class SunoApi {
       }
       return resp;
     })
+  }
+
+  private getBrowserToken(): string {
+    return JSON.stringify({
+      token: Buffer.from(JSON.stringify({ timestamp: Date.now() })).toString('base64')
+    });
   }
 
   public async init(): Promise<SunoApi> {
@@ -757,6 +793,206 @@ class SunoApi {
     return lines.join('\n');
   }
 
+  private normalizeClip(audio: any): any {
+    const metadata = audio?.metadata || {};
+
+    return {
+      ...audio,
+      lyric: metadata.prompt ? this.parseLyrics(metadata.prompt) : '',
+      gpt_description_prompt: metadata.gpt_description_prompt,
+      prompt: metadata.prompt,
+      type: metadata.type,
+      tags: metadata.tags,
+      negative_tags: metadata.negative_tags,
+      duration: metadata.duration,
+      error_message: metadata.error_message
+    };
+  }
+
+  private getAudioExtension(filename: string, contentType?: string): string {
+    const extension = path.extname(filename).replace(/^\./, '').toLowerCase();
+    if (extension)
+      return extension;
+
+    const extensionByMime: Record<string, string> = {
+      'audio/mpeg': 'mp3',
+      'audio/mp3': 'mp3',
+      'audio/wav': 'wav',
+      'audio/x-wav': 'wav',
+      'audio/flac': 'flac',
+      'audio/x-flac': 'flac',
+      'audio/aac': 'aac',
+      'audio/mp4': 'm4a',
+      'audio/x-m4a': 'm4a',
+      'audio/ogg': 'ogg',
+      'audio/webm': 'webm'
+    };
+
+    return extensionByMime[contentType || ''] || 'wav';
+  }
+
+  private async feedV3(payload: object): Promise<any> {
+    await this.keepAlive(false);
+    const response = await this.client.post(
+      `${SunoApi.BASE_URL}/api/feed/v3`,
+      payload,
+      { timeout: 10000 }
+    );
+
+    return response.data;
+  }
+
+  private async getFeedClipsByIds(clipIds: string[]): Promise<any[]> {
+    const response = await this.feedV3({
+      filters: {
+        ids: {
+          presence: 'True',
+          clipIds
+        }
+      },
+      limit: clipIds.length
+    });
+
+    return (response.clips || []).map((clip: any) => this.normalizeClip(clip));
+  }
+
+  private async waitForFeedClips(
+    clipIds: string[],
+    timeoutMs: number = 100000
+  ): Promise<any[]> {
+    const startTime = Date.now();
+    let lastResponse: any[] = [];
+
+    await sleep(3, 5);
+    while (Date.now() - startTime < timeoutMs) {
+      const response = await this.getFeedClipsByIds(clipIds);
+      const allCompleted = response.every(
+        audio => audio.status === 'streaming' || audio.status === 'complete'
+      );
+      const allError = response.every(audio => audio.status === 'error');
+
+      if (allCompleted || allError)
+        return response;
+
+      lastResponse = response;
+      await sleep(3, 6);
+      await this.keepAlive(true);
+    }
+
+    return lastResponse;
+  }
+
+  private async resolveWorkspace(
+    workspaceId?: string,
+    workspaceName?: string
+  ): Promise<WorkspaceInfo> {
+    if (workspaceId) {
+      return {
+        id: workspaceId,
+        name: workspaceName || workspaceId
+      };
+    }
+
+    if (!workspaceName)
+      throw new Error('workspace_id or workspace_name is required');
+
+    const workspaces = await this.listWorkspaces();
+    const normalizedName = workspaceName.trim().toLowerCase();
+    const workspace = workspaces.find(
+      item => item.name?.trim().toLowerCase() === normalizedName
+    );
+
+    if (!workspace)
+      throw new Error(`Workspace not found: ${workspaceName}`);
+
+    return workspace;
+  }
+
+  private buildAudioToAudioPayload({
+    sourceClipId,
+    mode,
+    prompt,
+    title,
+    tags,
+    negativeTags,
+    model,
+    projectId,
+    vocalGender,
+    createSessionToken
+  }: {
+    sourceClipId: string;
+    mode: AudioToAudioMode;
+    prompt: string;
+    title: string;
+    tags?: string;
+    negativeTags?: string;
+    model?: string;
+    projectId?: string;
+    vocalGender?: string;
+    createSessionToken?: string | null;
+  }) {
+    const taskByMode: Record<AudioToAudioMode, string> = {
+      cover: 'cover',
+      add_vocals: 'overpainting',
+      add_instrumental: 'underpainting'
+    };
+
+    const payload: any = {
+      project_id: projectId,
+      token: null,
+      task: taskByMode[mode],
+      generation_type: 'TEXT',
+      title,
+      tags,
+      negative_tags: negativeTags,
+      mv: model || DEFAULT_AUDIO_TO_AUDIO_MODEL,
+      prompt,
+      make_instrumental: false,
+      user_uploaded_images_b64: null,
+      metadata: {
+        web_client_pathname: '/create',
+        is_max_mode: false,
+        is_mumble: false,
+        create_mode: 'custom',
+        disable_volume_normalization: false,
+        is_remix: true
+      },
+      override_fields: [],
+      cover_clip_id: null,
+      cover_start_s: null,
+      cover_end_s: null,
+      persona_id: null,
+      artist_clip_id: null,
+      artist_start_s: null,
+      artist_end_s: null,
+      continue_clip_id: null,
+      continued_aligned_prompt: null,
+      continue_at: null,
+      transaction_uuid: randomUUID(),
+      overpainting_clip_id: null,
+      underpainting_clip_id: null
+    };
+
+    if (createSessionToken)
+      payload.metadata.create_session_token = createSessionToken;
+    if (vocalGender)
+      payload.metadata.vocal_gender = vocalGender;
+
+    switch (mode) {
+      case 'cover':
+        payload.cover_clip_id = sourceClipId;
+        break;
+      case 'add_vocals':
+        payload.overpainting_clip_id = sourceClipId;
+        break;
+      case 'add_instrumental':
+        payload.underpainting_clip_id = sourceClipId;
+        break;
+    }
+
+    return payload;
+  }
+
   /**
    * Retrieves audio information for the given song IDs.
    * @param songIds An optional array of song IDs to retrieve information for.
@@ -804,6 +1040,81 @@ class SunoApi {
     }));
   }
 
+  public async getUploadedAudio(uploadId: string): Promise<UploadedAudioInfo> {
+    await this.keepAlive(false);
+    const response = await this.client.get(
+      `${SunoApi.BASE_URL}/api/uploads/audio/${uploadId}/`
+    );
+
+    return response.data;
+  }
+
+  public async uploadAudio(
+    fileBuffer: Buffer,
+    filename: string,
+    contentType?: string,
+    wait_audio: boolean = true
+  ): Promise<UploadedAudioInfo> {
+    await this.keepAlive(false);
+    const extension = this.getAudioExtension(filename, contentType);
+    const initResponse = await this.client.post(
+      `${SunoApi.BASE_URL}/api/uploads/audio/`,
+      { extension }
+    );
+
+    const uploadData = initResponse.data;
+    const formData = new FormData();
+
+    Object.entries(uploadData.fields || {}).forEach(([key, value]) => {
+      formData.append(key, String(value));
+    });
+
+    formData.append(
+      'file',
+      new Blob([fileBuffer], {
+        type: contentType || `audio/${extension}`
+      }),
+      filename
+    );
+
+    const uploadResponse = await fetch(uploadData.url, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error(
+        `Failed to upload file to storage: ${uploadResponse.status} ${uploadResponse.statusText}`
+      );
+    }
+
+    await this.keepAlive(false);
+    await this.client.post(
+      `${SunoApi.BASE_URL}/api/uploads/audio/${uploadData.id}/upload-finish/`,
+      {
+        upload_type: 'file_upload',
+        upload_filename: filename
+      }
+    );
+
+    if (!wait_audio)
+      return this.getUploadedAudio(uploadData.id);
+
+    const startTime = Date.now();
+    let lastResponse = await this.getUploadedAudio(uploadData.id);
+
+    while (Date.now() - startTime < 120000) {
+      if (lastResponse.status === 'complete' || lastResponse.status === 'error')
+        return lastResponse;
+
+      await sleep(3, 5);
+      await this.keepAlive(true);
+      lastResponse = await this.getUploadedAudio(uploadData.id);
+    }
+
+    return lastResponse;
+  }
+
   /**
    * Retrieves information for a specific audio clip.
    * @param clipId The ID of the audio clip to retrieve information for.
@@ -815,6 +1126,155 @@ class SunoApi {
       `${SunoApi.BASE_URL}/api/clip/${clipId}`
     );
     return response.data;
+  }
+
+  public async listWorkspaces(page: number = 1): Promise<WorkspaceInfo[]> {
+    await this.keepAlive(false);
+    const response = await this.client.get(
+      `${SunoApi.BASE_URL}/api/project/me?page=${page}&sort=created_at&show_trashed=false&exclude_shared=false`,
+      { timeout: 10000 }
+    );
+
+    return response.data.projects || [];
+  }
+
+  public async moveClipsToWorkspace(
+    clipIds: string[],
+    workspaceId?: string,
+    workspaceName?: string
+  ): Promise<{
+    workspace_id: string;
+    workspace_name?: string;
+    clip_ids: string[];
+  }> {
+    const workspace = await this.resolveWorkspace(workspaceId, workspaceName);
+
+    await this.keepAlive(false);
+    await this.client.post(
+      `${SunoApi.BASE_URL}/api/project/${workspace.id}/clips`,
+      {
+        update_type: 'add',
+        metadata: {
+          clip_ids: clipIds
+        }
+      }
+    );
+
+    return {
+      workspace_id: workspace.id,
+      workspace_name: workspace.name,
+      clip_ids: clipIds
+    };
+  }
+
+  public async getWorkspaceFeed(
+    workspaceId?: string,
+    workspaceName?: string,
+    cursor?: string | null,
+    limit: number = 20
+  ): Promise<{
+    workspace: WorkspaceInfo;
+    clips: any[];
+    has_more?: boolean;
+    next_cursor?: string | null;
+  }> {
+    const workspace = await this.resolveWorkspace(workspaceId, workspaceName);
+    const response = await this.feedV3({
+      cursor: cursor ?? null,
+      limit,
+      filters: {
+        disliked: 'False',
+        trashed: 'False',
+        fromStudioProject: {
+          presence: 'False'
+        },
+        stem: {
+          presence: 'False'
+        },
+        workspace: {
+          presence: 'True',
+          workspaceId: workspace.id
+        }
+      }
+    });
+
+    return {
+      workspace,
+      clips: (response.clips || []).map((clip: any) => this.normalizeClip(clip)),
+      has_more: response.has_more,
+      next_cursor: response.next_cursor || response.cursor || null
+    };
+  }
+
+  public async generateFromAudio(
+    clipId: string,
+    mode: AudioToAudioMode,
+    options?: {
+      prompt?: string;
+      title?: string;
+      tags?: string;
+      negative_tags?: string;
+      model?: string;
+      wait_audio?: boolean;
+      workspace_id?: string;
+      workspace_name?: string;
+      vocal_gender?: string;
+    }
+  ): Promise<any[]> {
+    const sourceClip: any = await this.getClip(clipId);
+    const sourceMetadata = sourceClip?.metadata || {};
+    const defaultTitleByMode: Record<AudioToAudioMode, string> = {
+      cover: sourceClip.title || clipId,
+      add_vocals: `${sourceClip.title || clipId} (Add Vocal)`,
+      add_instrumental: `${sourceClip.title || clipId} (Add Instrumental)`
+    };
+
+    let workspace: WorkspaceInfo | undefined;
+    if (options?.workspace_id || options?.workspace_name) {
+      workspace = await this.resolveWorkspace(
+        options.workspace_id,
+        options.workspace_name
+      );
+    } else if (sourceClip?.project?.id) {
+      workspace = {
+        id: sourceClip.project.id,
+        name: sourceClip.project.name
+      };
+    }
+
+    const createSessionToken = await this.getSessionToken().catch(() => null);
+    const payload = this.buildAudioToAudioPayload({
+      sourceClipId: clipId,
+      mode,
+      prompt: options?.prompt ?? sourceMetadata.prompt ?? '',
+      title: options?.title ?? defaultTitleByMode[mode],
+      tags: options?.tags ?? sourceMetadata.tags ?? '',
+      negativeTags: options?.negative_tags ?? sourceMetadata.negative_tags ?? '',
+      model: options?.model,
+      projectId: workspace?.id,
+      vocalGender: options?.vocal_gender,
+      createSessionToken
+    });
+
+    await this.keepAlive(false);
+    const response = await this.client.post(
+      `${SunoApi.BASE_URL}/api/generate/v2-web/`,
+      payload,
+      {
+        timeout: 10000
+      }
+    );
+
+    const clipIds = (response.data.clips || []).map((clip: any) => clip.id);
+
+    if (workspace?.id && clipIds.length > 0) {
+      await this.moveClipsToWorkspace(clipIds, workspace.id);
+    }
+
+    if (options?.wait_audio)
+      return this.waitForFeedClips(clipIds);
+
+    return (response.data.clips || []).map((clip: any) => this.normalizeClip(clip));
   }
 
   public async get_credits(): Promise<object> {
@@ -850,10 +1310,10 @@ class SunoApi {
 }
 
 export const sunoApi = async (cookie?: string) => {
-  const resolvedCookie = cookie && cookie.includes('__client') ? cookie : process.env.SUNO_COOKIE; // Check for bad `Cookie` header (It's too expensive to actually parse the cookies *here*)
+  const resolvedCookie = cookie?.trim() || process.env.SUNO_COOKIE;
   if (!resolvedCookie) {
-    logger.info('No cookie provided! Aborting...\nPlease provide a cookie either in the .env file or in the Cookie header of your request.')
-    throw new Error('Please provide a cookie either in the .env file or in the Cookie header of your request.');
+    logger.info('No cookie provided! Aborting...\nPlease provide `suno_cookie` in the request or set SUNO_COOKIE in the .env file.')
+    throw new Error('Please provide `suno_cookie` in the request or set SUNO_COOKIE in the .env file.');
   }
 
   // Check if the instance for this cookie already exists in the cache

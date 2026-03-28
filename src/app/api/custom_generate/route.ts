@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from "next/server";
-import { cookies } from 'next/headers';
+import { missingSunoCookieResponse, resolveSunoCookie } from "@/lib/apiAuth";
 import { DEFAULT_MODEL, sunoApi } from "@/lib/SunoApi";
 import { corsHeaders } from "@/lib/utils";
 
@@ -11,7 +11,11 @@ export async function POST(req: NextRequest) {
     try {
       const body = await req.json();
       const { prompt, tags, title, make_instrumental, model, wait_audio, negative_tags } = body;
-      const audioInfo = await (await sunoApi((await cookies()).toString())).custom_generate(
+      const sunoCookie = resolveSunoCookie(req, body);
+      if (!sunoCookie)
+        return missingSunoCookieResponse();
+
+      const audioInfo = await (await sunoApi(sunoCookie)).custom_generate(
         prompt, tags, title,
         Boolean(make_instrumental),
         model || DEFAULT_MODEL,

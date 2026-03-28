@@ -589,6 +589,294 @@
         }
       }
     },
+    "/api/upload_audio": {
+      "post": {
+        "summary": "Upload an audio file to Suno.",
+        "description": "Uploads an audio file, completes Suno processing, and returns the uploaded clip data. When processing finishes successfully, the returned `s3_id` is the clip id that can be used in `generate_from_audio`.",
+        "tags": ["default"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Audio file to upload."
+                  },
+                  "wait_audio": {
+                    "type": "boolean",
+                    "description": "Wait until Suno finishes processing the upload.",
+                    "default": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "s3_id": {
+                      "type": "string",
+                      "description": "Generated clip id for the uploaded audio."
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "image_url": {
+                      "type": "string"
+                    },
+                    "has_vocal": {
+                      "type": "boolean"
+                    },
+                    "display_tags": {
+                      "type": "string"
+                    },
+                    "inferred_description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/move_clip": {
+      "post": {
+        "summary": "Move clips to a workspace.",
+        "description": "Moves one or more clips to a target workspace. The workspace can be identified by id or by exact name.",
+        "tags": ["default"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["clip_ids"],
+                "properties": {
+                  "clip_ids": {
+                    "oneOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      {
+                        "type": "string",
+                        "description": "Comma-separated clip ids."
+                      }
+                    ]
+                  },
+                  "workspace_id": {
+                    "type": "string"
+                  },
+                  "workspace_name": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "workspace_id": {
+                      "type": "string"
+                    },
+                    "workspace_name": {
+                      "type": "string"
+                    },
+                    "clip_ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workspace_feed": {
+      "get": {
+        "summary": "Get the feed for a workspace.",
+        "description": "Returns feed/clip information for the requested workspace. The workspace can be identified by id or by exact name.",
+        "tags": ["default"],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "workspace_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "workspace": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "clips": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/audio_info"
+                      }
+                    },
+                    "has_more": {
+                      "type": "boolean"
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/generate_from_audio": {
+      "post": {
+        "summary": "Generate from an existing audio clip.",
+        "description": "Generates new clips from an existing audio clip in one of three modes: `cover`, `add_vocals`, or `add_instrumental`.",
+        "tags": ["default"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["clip_id", "mode"],
+                "properties": {
+                  "clip_id": {
+                    "type": "string",
+                    "description": "Source clip id. For uploaded files, use the `s3_id` returned by `/api/upload_audio`."
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": ["cover", "add_vocals", "add_instrumental"]
+                  },
+                  "prompt": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "tags": {
+                    "type": "string"
+                  },
+                  "negative_tags": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string",
+                    "example": "chirp-fenix"
+                  },
+                  "wait_audio": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "workspace_id": {
+                    "type": "string"
+                  },
+                  "workspace_name": {
+                    "type": "string"
+                  },
+                  "vocal_gender": {
+                    "type": "string",
+                    "description": "Optional vocal hint passed to the web generation payload."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/audio_info"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/persona": {
       "get": {
         "summary": "Get persona information and clips.",
