@@ -658,6 +658,89 @@
         }
       }
     },
+    "/api/upload_file": {
+      "get": {
+        "summary": "Get async upload workflow status.",
+        "description": "Returns the current state of a previously created upload workflow, including each step output and any error details.",
+        "tags": ["default"],
+        "parameters": [
+          {
+            "name": "work_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "success"
+          },
+          "404": {
+            "description": "Upload work not found"
+          }
+        }
+      },
+      "post": {
+        "summary": "Run the full upload workflow asynchronously.",
+        "description": "Starts the full Suno upload workflow in the background. This includes the raw upload, waiting for processing, initializing the clip in the account, setting metadata, accepting the inferred description, and optionally moving the clip to a workspace. The API returns immediately with a `work_id` that can be polled later.",
+        "tags": ["default"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "workspace_id": {
+                    "type": "string"
+                  },
+                  "workspace_name": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "image_url": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "work_id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "example": "queued"
+                    },
+                    "status_url": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/move_clip": {
       "post": {
         "summary": "Move clips to a workspace.",

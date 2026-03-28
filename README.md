@@ -112,6 +112,7 @@ docker compose build && docker compose up
 - `HOST` — host/interface where Next.js binds. Recommended `127.0.0.1` locally and `0.0.0.0` in Docker.
 - `PORT` — port where the app listens.
 - `APP_BASE_PATH` — base path where the app is exposed. Default is `/`, which is represented by leaving this variable empty. If you serve the app behind a reverse proxy under a subpath such as `/tools/suno-api`, this value must be set before `npm run build` or `docker compose build`.
+- `UPLOAD_FILE_WORK_DIR` — directory used by the async `/api/upload_file` workflow to persist `work_id` state across process restarts. Defaults to `./.data/upload-file-works`.
 - `DOCKER_BIND_HOST` — only for Docker Compose. Host interface where the container port is published.
 - `DOCKER_HOST_PORT` — only for Docker Compose. Host port published by Docker.
 ```bash
@@ -124,6 +125,7 @@ BROWSER_HEADLESS=true
 HOST=127.0.0.1
 PORT=3000
 APP_BASE_PATH=
+UPLOAD_FILE_WORK_DIR=
 DOCKER_BIND_HOST=127.0.0.1
 DOCKER_HOST_PORT=3000
 ```

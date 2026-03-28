@@ -33,11 +33,21 @@ export async function GET(req: NextRequest) {
           ...corsHeaders
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching audio:', error);
 
-      return new NextResponse(JSON.stringify({ error: 'Internal server error' }), {
-        status: 500,
+      const status =
+        error?.status ||
+        error?.response?.status ||
+        500;
+      const message =
+        error?.response?.data?.detail ||
+        error?.response?.data?.error ||
+        error?.message ||
+        'Internal server error';
+
+      return new NextResponse(JSON.stringify({ error: message }), {
+        status: status,
         headers: {
           'Content-Type': 'application/json',
           ...corsHeaders

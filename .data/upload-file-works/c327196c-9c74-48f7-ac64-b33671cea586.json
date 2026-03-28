@@ -1,0 +1,244 @@
+{
+  "work_id": "c327196c-9c74-48f7-ac64-b33671cea586",
+  "status": "completed",
+  "created_at": "2026-03-28T23:24:12.110Z",
+  "updated_at": "2026-03-28T23:24:35.835Z",
+  "input": {
+    "filename": "Ashvma_-_FOCUS_Clip_Officiel-vocals+drums+bass+other-+0st-musicLP-voxDrive.wav",
+    "content_type": "audio/wave",
+    "file_size": 12066092
+  },
+  "steps": [
+    {
+      "key": "create_upload",
+      "label": "Create upload task",
+      "status": "completed",
+      "started_at": "2026-03-28T23:24:12.114Z",
+      "finished_at": "2026-03-28T23:24:12.736Z",
+      "output": {
+        "id": "6cb1ad98-b8a4-4231-89e2-7e1deca00653",
+        "url": "https://suno-uploads.s3.amazonaws.com/",
+        "fields": {
+          "Content-Type": "audio/wav",
+          "key": "raw_uploads/6cb1ad98-b8a4-4231-89e2-7e1deca00653.wav",
+          "AWSAccessKeyId": "AKIA2V4GXGDKLZ43MUG7",
+          "policy": "eyJleHBpcmF0aW9uIjogIjIwMjYtMDMtMjhUMjM6MzU6MTJaIiwgImNvbmRpdGlvbnMiOiBbWyJjb250ZW50LWxlbmd0aC1yYW5nZSIsIDAsIDUyNDI4ODAwMF0sIFsic3RhcnRzLXdpdGgiLCAiJENvbnRlbnQtVHlwZSIsICJhdWRpby93YXYiXSwgeyJidWNrZXQiOiAic3Vuby11cGxvYWRzIn0sIHsia2V5IjogInJhd191cGxvYWRzLzZjYjFhZDk4LWI4YTQtNDIzMS04OWUyLTdlMWRlY2EwMDY1My53YXYifV19",
+          "signature": "JT8Mlyg3Z5/0w839Dp8lcearz6o="
+        },
+        "is_file_uploaded": false
+      }
+    },
+    {
+      "key": "upload_storage",
+      "label": "Upload file to storage",
+      "status": "completed",
+      "started_at": "2026-03-28T23:24:12.736Z",
+      "finished_at": "2026-03-28T23:24:15.879Z",
+      "output": {
+        "ok": true,
+        "status": 204,
+        "statusText": "No Content"
+      }
+    },
+    {
+      "key": "upload_finish",
+      "label": "Finalize upload",
+      "status": "completed",
+      "started_at": "2026-03-28T23:24:15.880Z",
+      "finished_at": "2026-03-28T23:24:16.427Z",
+      "output": {}
+    },
+    {
+      "key": "poll_upload",
+      "label": "Wait for Suno upload processing",
+      "status": "completed",
+      "started_at": "2026-03-28T23:24:16.428Z",
+      "output": {
+        "attempts": [
+          {
+            "id": "6cb1ad98-b8a4-4231-89e2-7e1deca00653",
+            "status": "processing",
+            "title": ""
+          },
+          {
+            "id": "6cb1ad98-b8a4-4231-89e2-7e1deca00653",
+            "status": "passed_audio_processing",
+            "title": ""
+          },
+          {
+            "id": "6cb1ad98-b8a4-4231-89e2-7e1deca00653",
+            "status": "passed_artist_moderation",
+            "title": ""
+          },
+          {
+            "id": "6cb1ad98-b8a4-4231-89e2-7e1deca00653",
+            "status": "passed_artist_moderation",
+            "title": ""
+          },
+          {
+            "id": "6cb1ad98-b8a4-4231-89e2-7e1deca00653",
+            "status": "complete",
+            "s3_id": "21dc21db-0582-4d1a-99f1-14d600c0cd19",
+            "title": "Ashvma_-_FOCUS_Clip_Officiel-vocals+drums+bass+other-+0st-musicLP-voxDrive",
+            "image_url": "https://cdn2.suno.ai/image_21dc21db-0582-4d1a-99f1-14d600c0cd19.jpeg",
+            "has_vocal": true,
+            "display_tags": "French trap, melodic rap, autotuned male vocals",
+            "inferred_description": "French melodic trap featuring a processed male vocal with heavy pitch correction and autotune. The production centers on a dark, minor-key piano melody playing syncopated chords and a repetitive high-register bell-like synth pluck. The rhythm section consists of a distorted 808 bass that slides between notes, a crisp snare on the third beat, and rapid-fire hi-hat rolls with varying velocities. A subtle ambient pad provides atmospheric depth in the background. The tempo is 140 BPM in the key of C# minor."
+          }
+        ],
+        "latest": {
+          "id": "6cb1ad98-b8a4-4231-89e2-7e1deca00653",
+          "status": "complete",
+          "s3_id": "21dc21db-0582-4d1a-99f1-14d600c0cd19",
+          "title": "Ashvma_-_FOCUS_Clip_Officiel-vocals+drums+bass+other-+0st-musicLP-voxDrive",
+          "image_url": "https://cdn2.suno.ai/image_21dc21db-0582-4d1a-99f1-14d600c0cd19.jpeg",
+          "has_vocal": true,
+          "display_tags": "French trap, melodic rap, autotuned male vocals",
+          "inferred_description": "French melodic trap featuring a processed male vocal with heavy pitch correction and autotune. The production centers on a dark, minor-key piano melody playing syncopated chords and a repetitive high-register bell-like synth pluck. The rhythm section consists of a distorted 808 bass that slides between notes, a crisp snare on the third beat, and rapid-fire hi-hat rolls with varying velocities. A subtle ambient pad provides atmospheric depth in the background. The tempo is 140 BPM in the key of C# minor."
+        }
+      },
+      "finished_at": "2026-03-28T23:24:34.596Z"
+    },
+    {
+      "key": "initialize_clip",
+      "label": "Initialize clip in account",
+      "status": "completed",
+      "started_at": "2026-03-28T23:24:34.597Z",
+      "finished_at": "2026-03-28T23:24:35.033Z",
+      "output": {
+        "clip_id": "21dc21db-0582-4d1a-99f1-14d600c0cd19"
+      }
+    },
+    {
+      "key": "set_metadata",
+      "label": "Set clip metadata",
+      "status": "completed",
+      "started_at": "2026-03-28T23:24:35.034Z",
+      "finished_at": "2026-03-28T23:24:35.469Z",
+      "output": {
+        "id": "21dc21db-0582-4d1a-99f1-14d600c0cd19",
+        "title": "Ashvma_-_FOCUS_Clip_Officiel-vocals+drums+bass+other-+0st-musicLP-voxDrive",
+        "image_s3_id": "image_21dc21db-0582-4d1a-99f1-14d600c0cd19",
+        "image_url": "https://cdn2.suno.ai/image_21dc21db-0582-4d1a-99f1-14d600c0cd19.jpeg",
+        "prompt": "[Intro]\n[dark syncopated piano, atmospheric pad]\n[808 bass enters with sliding notes]\nViens faire un tour dans l'cage, j'en remets\nMa maladie, car je l'connais\nIls m'ont cherché, à point, j'm'en remets\nBon, j'suis dans les temps\n\n[Chorus]\n[hi-hat rolls enter, crisp snare on beat 3]\nMa chérie, viens, on va voir ma paix\nJe crois qu'on va s'mettre en paix\nIls sont à terre, donc rien ne les empêche\nIls veulent tout avoir, ils s'font des empêches\nQuand je t'vois chez un autre, j'arrive pas à rester fort\n\n[Verse 1]\n[piano continues, bass becomes more rhythmic]\nMoi, je regarde en avant, tous les jours, je reste fort\nLoin de la vie des autres, j'suis éloigné de leur mort\nJ'ai pas inversé les rôles, et maintenant c'est fini entre nous\nViens faire un tour dans l'cage, j'en remets\nMa maladie, car je l'connais\nIls m'ont cherché, à point, j'm'en remets\nBon, j'suis dans les temps\n\n[Chorus]\n[full percussion, heavy 808 slides]\nMa chérie, viens, on va voir ma paix\nMoi, je connais, je vais faire le tour du monde\nJe n'sais pas c'que t'as dans l'âme\nJ'suis déjà loin de là, de là\n\n[Bridge]\n[drums drop out, piano and pad only]\nComme un missile, je connais les risques\nÇa va aller, je pense à nos dettes\nQu'est-ce que t'as dit ? Qu'est-ce que t'as pour la vie ?\nJ'ai pas dormi, t'es toujours dans mes idées\nTout ça, j'aurais pu l'éviter, mais c'est pas pour autant qu'on va s'quitter\nJe t'aime pas que pendant le week-end (oh-oh)\n\n[Chorus]\n[drums re-enter]\nViens faire un tour dans l'cage, j'en remets\nMa maladie, car je l'connais\nIls m'ont cherché, à point, j'm'en remets\nBon, j'suis dans les temps\nMa chérie, viens, on va voir ma paix\nMoi, je connais, je vais faire le tour du monde\nJe n'sais pas c'que t'as dans l'âme\nJ'suis déjà loin de là, de là",
+        "video_is_stale": false,
+        "opt_out_video_cover_hook": false
+      }
+    },
+    {
+      "key": "set_audio_description",
+      "label": "Accept inferred description",
+      "status": "completed",
+      "started_at": "2026-03-28T23:24:35.470Z",
+      "finished_at": "2026-03-28T23:24:35.833Z",
+      "output": {
+        "status": "complete",
+        "title": "Ashvma_-_FOCUS_Clip_Officiel-vocals+drums+bass+other-+0st-musicLP-voxDrive",
+        "play_count": 0,
+        "upvote_count": 0,
+        "allow_comments": true,
+        "id": "21dc21db-0582-4d1a-99f1-14d600c0cd19",
+        "entity_type": "song_schema",
+        "video_url": "",
+        "audio_url": "https://cdn1.suno.ai/21dc21db-0582-4d1a-99f1-14d600c0cd19.mp3",
+        "image_url": "https://cdn2.suno.ai/image_21dc21db-0582-4d1a-99f1-14d600c0cd19.jpeg",
+        "image_large_url": "https://cdn2.suno.ai/image_large_21dc21db-0582-4d1a-99f1-14d600c0cd19.jpeg",
+        "major_model_version": "",
+        "model_name": "chirp",
+        "metadata": {
+          "tags": "French melodic trap featuring a processed male vocal with heavy pitch correction and autotune. The production centers on a dark, minor-key piano melody playing syncopated chords and a repetitive high-register bell-like synth pluck. The rhythm section consists of a distorted 808 bass that slides between notes, a crisp snare on the third beat, and rapid-fire hi-hat rolls with varying velocities. A subtle ambient pad provides atmospheric depth in the background. The tempo is 140 BPM in the key of C# minor.",
+          "prompt": "[Intro]\n[dark syncopated piano, atmospheric pad]\n[808 bass enters with sliding notes]\nViens faire un tour dans l'cage, j'en remets\nMa maladie, car je l'connais\nIls m'ont cherché, à point, j'm'en remets\nBon, j'suis dans les temps\n\n[Chorus]\n[hi-hat rolls enter, crisp snare on beat 3]\nMa chérie, viens, on va voir ma paix\nJe crois qu'on va s'mettre en paix\nIls sont à terre, donc rien ne les empêche\nIls veulent tout avoir, ils s'font des empêches\nQuand je t'vois chez un autre, j'arrive pas à rester fort\n\n[Verse 1]\n[piano continues, bass becomes more rhythmic]\nMoi, je regarde en avant, tous les jours, je reste fort\nLoin de la vie des autres, j'suis éloigné de leur mort\nJ'ai pas inversé les rôles, et maintenant c'est fini entre nous\nViens faire un tour dans l'cage, j'en remets\nMa maladie, car je l'connais\nIls m'ont cherché, à point, j'm'en remets\nBon, j'suis dans les temps\n\n[Chorus]\n[full percussion, heavy 808 slides]\nMa chérie, viens, on va voir ma paix\nMoi, je connais, je vais faire le tour du monde\nJe n'sais pas c'que t'as dans l'âme\nJ'suis déjà loin de là, de là\n\n[Bridge]\n[drums drop out, piano and pad only]\nComme un missile, je connais les risques\nÇa va aller, je pense à nos dettes\nQu'est-ce que t'as dit ? Qu'est-ce que t'as pour la vie ?\nJ'ai pas dormi, t'es toujours dans mes idées\nTout ça, j'aurais pu l'éviter, mais c'est pas pour autant qu'on va s'quitter\nJe t'aime pas que pendant le week-end (oh-oh)\n\n[Chorus]\n[drums re-enter]\nViens faire un tour dans l'cage, j'en remets\nMa maladie, car je l'connais\nIls m'ont cherché, à point, j'm'en remets\nBon, j'suis dans les temps\nMa chérie, viens, on va voir ma paix\nMoi, je connais, je vais faire le tour du monde\nJe n'sais pas c'que t'as dans l'âme\nJ'suis déjà loin de là, de là",
+          "type": "upload",
+          "duration": 136.80327083333333,
+          "has_vocal": true,
+          "can_publish_with_vocal": true,
+          "is_audio_upload_tos_accepted": true,
+          "can_remix": false,
+          "is_remix": false
+        },
+        "is_liked": false,
+        "user_id": "ae5e2285-3aaa-4d41-9de8-141754d2291a",
+        "display_name": "Naz4ri Music",
+        "handle": "naz4rimusic",
+        "is_handle_updated": true,
+        "avatar_image_url": "https://cdn2.suno.ai/dc3a9f0e-acc0-4ba9-969d-c1b99cefc19a.jpeg",
+        "is_trashed": false,
+        "is_hidden": false,
+        "created_at": "2026-03-28T23:24:35.012Z",
+        "is_public": false,
+        "flag_count": 0,
+        "display_tags": "French trap, melodic rap, autotuned male vocals",
+        "is_contest_clip": false,
+        "has_hook": false,
+        "batch_index": 0
+      }
+    },
+    {
+      "key": "move_to_workspace",
+      "label": "Move clip to workspace",
+      "status": "skipped",
+      "finished_at": "2026-03-28T23:24:35.834Z",
+      "output": {
+        "skipped": true,
+        "reason": "No workspace_id or workspace_name provided"
+      }
+    }
+  ],
+  "result": {
+    "upload": {
+      "id": "6cb1ad98-b8a4-4231-89e2-7e1deca00653",
+      "status": "complete",
+      "s3_id": "21dc21db-0582-4d1a-99f1-14d600c0cd19",
+      "title": "Ashvma_-_FOCUS_Clip_Officiel-vocals+drums+bass+other-+0st-musicLP-voxDrive",
+      "image_url": "https://cdn2.suno.ai/image_21dc21db-0582-4d1a-99f1-14d600c0cd19.jpeg",
+      "has_vocal": true,
+      "display_tags": "French trap, melodic rap, autotuned male vocals",
+      "inferred_description": "French melodic trap featuring a processed male vocal with heavy pitch correction and autotune. The production centers on a dark, minor-key piano melody playing syncopated chords and a repetitive high-register bell-like synth pluck. The rhythm section consists of a distorted 808 bass that slides between notes, a crisp snare on the third beat, and rapid-fire hi-hat rolls with varying velocities. A subtle ambient pad provides atmospheric depth in the background. The tempo is 140 BPM in the key of C# minor."
+    },
+    "initialized_clip": {
+      "clip_id": "21dc21db-0582-4d1a-99f1-14d600c0cd19"
+    },
+    "clip": {
+      "status": "complete",
+      "title": "Ashvma_-_FOCUS_Clip_Officiel-vocals+drums+bass+other-+0st-musicLP-voxDrive",
+      "play_count": 0,
+      "upvote_count": 0,
+      "allow_comments": true,
+      "id": "21dc21db-0582-4d1a-99f1-14d600c0cd19",
+      "entity_type": "song_schema",
+      "video_url": "",
+      "audio_url": "https://cdn1.suno.ai/21dc21db-0582-4d1a-99f1-14d600c0cd19.mp3",
+      "image_url": "https://cdn2.suno.ai/image_21dc21db-0582-4d1a-99f1-14d600c0cd19.jpeg",
+      "image_large_url": "https://cdn2.suno.ai/image_large_21dc21db-0582-4d1a-99f1-14d600c0cd19.jpeg",
+      "major_model_version": "",
+      "model_name": "chirp",
+      "metadata": {
+        "tags": "French melodic trap featuring a processed male vocal with heavy pitch correction and autotune. The production centers on a dark, minor-key piano melody playing syncopated chords and a repetitive high-register bell-like synth pluck. The rhythm section consists of a distorted 808 bass that slides between notes, a crisp snare on the third beat, and rapid-fire hi-hat rolls with varying velocities. A subtle ambient pad provides atmospheric depth in the background. The tempo is 140 BPM in the key of C# minor.",
+        "prompt": "[Intro]\n[dark syncopated piano, atmospheric pad]\n[808 bass enters with sliding notes]\nViens faire un tour dans l'cage, j'en remets\nMa maladie, car je l'connais\nIls m'ont cherché, à point, j'm'en remets\nBon, j'suis dans les temps\n\n[Chorus]\n[hi-hat rolls enter, crisp snare on beat 3]\nMa chérie, viens, on va voir ma paix\nJe crois qu'on va s'mettre en paix\nIls sont à terre, donc rien ne les empêche\nIls veulent tout avoir, ils s'font des empêches\nQuand je t'vois chez un autre, j'arrive pas à rester fort\n\n[Verse 1]\n[piano continues, bass becomes more rhythmic]\nMoi, je regarde en avant, tous les jours, je reste fort\nLoin de la vie des autres, j'suis éloigné de leur mort\nJ'ai pas inversé les rôles, et maintenant c'est fini entre nous\nViens faire un tour dans l'cage, j'en remets\nMa maladie, car je l'connais\nIls m'ont cherché, à point, j'm'en remets\nBon, j'suis dans les temps\n\n[Chorus]\n[full percussion, heavy 808 slides]\nMa chérie, viens, on va voir ma paix\nMoi, je connais, je vais faire le tour du monde\nJe n'sais pas c'que t'as dans l'âme\nJ'suis déjà loin de là, de là\n\n[Bridge]\n[drums drop out, piano and pad only]\nComme un missile, je connais les risques\nÇa va aller, je pense à nos dettes\nQu'est-ce que t'as dit ? Qu'est-ce que t'as pour la vie ?\nJ'ai pas dormi, t'es toujours dans mes idées\nTout ça, j'aurais pu l'éviter, mais c'est pas pour autant qu'on va s'quitter\nJe t'aime pas que pendant le week-end (oh-oh)\n\n[Chorus]\n[drums re-enter]\nViens faire un tour dans l'cage, j'en remets\nMa maladie, car je l'connais\nIls m'ont cherché, à point, j'm'en remets\nBon, j'suis dans les temps\nMa chérie, viens, on va voir ma paix\nMoi, je connais, je vais faire le tour du monde\nJe n'sais pas c'que t'as dans l'âme\nJ'suis déjà loin de là, de là",
+        "type": "upload",
+        "duration": 136.80327083333333,
+        "has_vocal": true,
+        "can_publish_with_vocal": true,
+        "is_audio_upload_tos_accepted": true,
+        "can_remix": false,
+        "is_remix": false
+      },
+      "is_liked": false,
+      "user_id": "ae5e2285-3aaa-4d41-9de8-141754d2291a",
+      "display_name": "Naz4ri Music",
+      "handle": "naz4rimusic",
+      "is_handle_updated": true,
+      "avatar_image_url": "https://cdn2.suno.ai/dc3a9f0e-acc0-4ba9-969d-c1b99cefc19a.jpeg",
+      "is_trashed": false,
+      "is_hidden": false,
+      "created_at": "2026-03-28T23:24:35.012Z",
+      "is_public": false,
+      "flag_count": 0,
+      "display_tags": "French trap, melodic rap, autotuned male vocals",
+      "is_contest_clip": false,
+      "has_hook": false,
+      "batch_index": 0
+    },
+    "workspace_move": null
+  }
+}

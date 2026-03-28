@@ -62,6 +62,16 @@ export interface UploadedAudioInfo {
   error_message?: string;
 }
 
+export interface AudioUploadInitInfo {
+  id: string;
+  url: string;
+  fields?: Record<string, string>;
+}
+
+export interface InitializedUploadClipInfo {
+  clip_id: string;
+}
+
 export type AudioToAudioMode = 'cover' | 'add_vocals' | 'add_instrumental';
 
 interface PersonaResponse {
@@ -831,6 +841,13 @@ class SunoApi {
     return extensionByMime[contentType || ''] || 'wav';
   }
 
+  public resolveAudioUploadExtension(
+    filename: string,
+    contentType?: string
+  ): string {
+    return this.getAudioExtension(filename, contentType);
+  }
+
   private async feedV3(payload: object): Promise<any> {
     await this.keepAlive(false);
     const response = await this.client.post(
@@ -1049,20 +1066,29 @@ class SunoApi {
     return response.data;
   }
 
-  public async uploadAudio(
-    fileBuffer: Buffer,
-    filename: string,
-    contentType?: string,
-    wait_audio: boolean = true
-  ): Promise<UploadedAudioInfo> {
+  public async createAudioUpload(
+    extension: string
+  ): Promise<AudioUploadInitInfo> {
     await this.keepAlive(false);
-    const extension = this.getAudioExtension(filename, contentType);
-    const initResponse = await this.client.post(
+    const response = await this.client.post(
       `${SunoApi.BASE_URL}/api/uploads/audio/`,
       { extension }
     );
 
-    const uploadData = initResponse.data;
+    return response.data;
+  }
+
+  public async uploadAudioToStorage(
+    uploadData: AudioUploadInitInfo,
+    fileBuffer: Buffer,
+    filename: string,
+    contentType?: string
+  ): Promise<{
+    ok: boolean;
+    status: number;
+    statusText: string;
+  }> {
+    const extension = this.getAudioExtension(filename, contentType);
     const formData = new FormData();
 
     Object.entries(uploadData.fields || {}).forEach(([key, value]) => {
@@ -1088,14 +1114,80 @@ class SunoApi {
       );
     }
 
+    return {
+      ok: uploadResponse.ok,
+      status: uploadResponse.status,
+      statusText: uploadResponse.statusText
+    };
+  }
+
+  public async finishAudioUpload(
+    uploadId: string,
+    filename: string
+  ): Promise<any> {
     await this.keepAlive(false);
-    await this.client.post(
-      `${SunoApi.BASE_URL}/api/uploads/audio/${uploadData.id}/upload-finish/`,
+    const response = await this.client.post(
+      `${SunoApi.BASE_URL}/api/uploads/audio/${uploadId}/upload-finish/`,
       {
         upload_type: 'file_upload',
         upload_filename: filename
       }
     );
+
+    return response.data;
+  }
+
+  public async initializeUploadClip(
+    uploadId: string
+  ): Promise<InitializedUploadClipInfo> {
+    await this.keepAlive(false);
+    const response = await this.client.post(
+      `${SunoApi.BASE_URL}/api/uploads/audio/${uploadId}/initialize-clip/`,
+      {}
+    );
+
+    return response.data;
+  }
+
+  public async setClipMetadata(
+    clipId: string,
+    payload: {
+      title?: string;
+      image_url?: string;
+      is_audio_upload_tos_accepted?: boolean;
+    }
+  ): Promise<any> {
+    await this.keepAlive(false);
+    const response = await this.client.post(
+      `${SunoApi.BASE_URL}/api/gen/${clipId}/set_metadata/`,
+      payload
+    );
+
+    return response.data;
+  }
+
+  public async acceptAudioDescription(
+    clipId: string
+  ): Promise<any> {
+    await this.keepAlive(false);
+    const response = await this.client.post(
+      `${SunoApi.BASE_URL}/api/gen/${clipId}/set_audio_description`,
+      { gemini_description_accepted: true }
+    );
+
+    return response.data;
+  }
+
+  public async uploadAudio(
+    fileBuffer: Buffer,
+    filename: string,
+    contentType?: string,
+    wait_audio: boolean = true
+  ): Promise<UploadedAudioInfo> {
+    const extension = this.getAudioExtension(filename, contentType);
+    const uploadData = await this.createAudioUpload(extension);
+    await this.uploadAudioToStorage(uploadData, fileBuffer, filename, contentType);
+    await this.finishAudioUpload(uploadData.id, filename);
 
     if (!wait_audio)
       return this.getUploadedAudio(uploadData.id);
@@ -1122,10 +1214,25 @@ class SunoApi {
    */
   public async getClip(clipId: string): Promise<object> {
     await this.keepAlive(false);
-    const response = await this.client.get(
-      `${SunoApi.BASE_URL}/api/clip/${clipId}`
-    );
-    return response.data;
+
+    try {
+      const response = await this.client.get(
+        `${SunoApi.BASE_URL}/api/clip/${clipId}`
+      );
+
+      return this.normalizeClip(response.data);
+    } catch (error) {
+      if (!axios.isAxiosError(error) || error.response?.status !== 404)
+        throw error;
+
+      const [clip] = await this.getFeedClipsByIds([clipId]);
+      if (clip)
+        return clip;
+
+      const notFoundError = new Error(`Clip not found: ${clipId}`);
+      (notFoundError as Error & { status?: number }).status = 404;
+      throw notFoundError;
+    }
   }
 
   public async listWorkspaces(page: number = 1): Promise<WorkspaceInfo[]> {

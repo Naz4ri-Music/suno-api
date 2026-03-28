@@ -34,7 +34,8 @@ export default function Docs() {
 - \`/api/clip\`:  Get clip information based on ID passed as query parameter \`id\`
 - \`/api/concat\`: Generate the whole song from extensions
 - \`/api/persona\`: Get persona information and clips based on ID and page number
-- \`/api/upload_audio\`: Upload an audio file to Suno and get the generated clip id
+- \`/api/upload_audio\`: Low-level audio upload to Suno. Returns upload processing info only
+- \`/api/upload_file\`: Full async upload workflow. Returns a \`work_id\` and lets you poll each step/output
 - \`/api/move_clip\`: Move one or more clips to a workspace by id or name
 - \`/api/workspace_feed\`: Read the feed/clips of a workspace by id or name
 - \`/api/generate_from_audio\`: Generate from an existing audio clip in cover, add vocals or add instrumental mode
