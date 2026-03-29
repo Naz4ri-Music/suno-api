@@ -138,6 +138,7 @@ class SunoApi {
   private readonly client: AxiosInstance;
   private sid?: string;
   private currentToken?: string;
+  private currentTokenExpiresAt?: number;
   private deviceId?: string;
   private userAgent?: string;
   private cookies: Record<string, string | undefined>;
@@ -194,6 +195,47 @@ class SunoApi {
     });
   }
 
+  private decodeJwtExpiry(token?: string | null): number | undefined {
+    if (!token)
+      return undefined;
+
+    try {
+      const payload = token.split('.')[1];
+      if (!payload)
+        return undefined;
+
+      const normalizedPayload = payload
+        .replace(/-/g, '+')
+        .replace(/_/g, '/')
+        .padEnd(Math.ceil(payload.length / 4) * 4, '=');
+
+      const decoded = JSON.parse(
+        Buffer.from(normalizedPayload, 'base64').toString('utf8')
+      );
+
+      return typeof decoded.exp === 'number'
+        ? decoded.exp * 1000
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private setCurrentToken(token?: string | null) {
+    this.currentToken = token || undefined;
+    this.currentTokenExpiresAt = this.decodeJwtExpiry(token);
+  }
+
+  private hasUsableCurrentToken(bufferMs: number = 60_000): boolean {
+    if (!this.currentToken)
+      return false;
+
+    if (!this.currentTokenExpiresAt)
+      return true;
+
+    return this.currentTokenExpiresAt - Date.now() > bufferMs;
+  }
+
   public async init(): Promise<SunoApi> {
     //await this.getClerkLatestVersion();
     await this.getAuthToken();
@@ -248,19 +290,37 @@ class SunoApi {
     if (!this.sid) {
       throw new Error('Session ID is not set. Cannot renew token.');
     }
+    if (this.hasUsableCurrentToken()) {
+      return;
+    }
     // URL to renew session token
     const renewUrl = `${SunoApi.CLERK_BASE_URL}/v1/client/sessions/${this.sid}/tokens?__clerk_api_version=2025-11-10&_clerk_js_version=${SunoApi.CLERK_VERSION}`;
     // Renew session token
     logger.info('KeepAlive...\n');
-    const renewResponse = await this.client.post(renewUrl, {}, {
-      headers: { Authorization: this.cookies.__client }
-    });
+    let renewResponse;
+    try {
+      renewResponse = await this.client.post(renewUrl, {}, {
+        headers: { Authorization: this.cookies.__client }
+      });
+    } catch (error) {
+      if (
+        axios.isAxiosError(error) &&
+        error.response?.status === 429 &&
+        this.hasUsableCurrentToken(5_000)
+      ) {
+        logger.warn(
+          'KeepAlive rate limited by Cloudflare; reusing current JWT token.'
+        );
+        return;
+      }
+      throw error;
+    }
     if (isWait) {
       await sleep(1, 2);
     }
     const newToken = renewResponse.data.jwt;
     // Update Authorization field in request header with the new JWT token
-    this.currentToken = newToken;
+    this.setCurrentToken(newToken);
   }
 
   /**
@@ -493,7 +553,9 @@ class SunoApi {
           browser.browser()?.close();
           controller.abort();
           const request = route.request();
-          this.currentToken = request.headers().authorization.split('Bearer ').pop();
+          this.setCurrentToken(
+            request.headers().authorization.split('Bearer ').pop()
+          );
           resolve(request.postDataJSON().token);
         } catch(err) {
           reject(err);
