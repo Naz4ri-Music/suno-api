@@ -39,6 +39,10 @@ export default function Docs() {
 - \`/api/uploads/audio/{audio_id}/initialize-clip\`: Initialize an uploaded audio into a clip in the account
 - \`/api/gen/{clip_id}/set_metadata\`: Set metadata for a clip
 - \`/api/gen/{clip_id}/set_audio_description\`: Accept or update the generated audio description for a clip
+- \`/api/playlist/create\`: Create a playlist in one call, including the required rename step
+- \`/api/playlist/set_metadata\`: Rename or update playlist metadata
+- \`/api/playlist/me\`: List your playlists
+- \`/api/playlist/update_clips\`: Add or remove clips from a playlist
 - \`/api/move_clip\`: Move one or more clips to a workspace by id or name
 - \`/api/workspace_feed\`: Read the feed/clips of a workspace by id or name
 - \`/api/generate_from_audio\`: Generate from an existing audio clip in cover, add vocals or add instrumental mode

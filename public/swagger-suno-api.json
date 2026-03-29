@@ -856,6 +856,161 @@
         }
       }
     },
+    "/api/playlist/create": {
+      "post": {
+        "summary": "Create a playlist.",
+        "description": "Creates a playlist in one exposed API call. Internally it performs Suno's draft creation and metadata update so the caller only needs to provide the final name.",
+        "tags": ["default"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "success"
+          }
+        }
+      }
+    },
+    "/api/playlist/set_metadata": {
+      "post": {
+        "summary": "Rename or update a playlist.",
+        "description": "Wraps Suno's playlist metadata endpoint.",
+        "tags": ["default"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["playlist_id", "name"],
+                "properties": {
+                  "playlist_id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "success"
+          }
+        }
+      }
+    },
+    "/api/playlist/me": {
+      "get": {
+        "summary": "List my playlists.",
+        "description": "Wraps Suno's playlist listing endpoint.",
+        "tags": ["default"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "show_trashed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "show_sharelist",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "success"
+          }
+        }
+      }
+    },
+    "/api/playlist/update_clips": {
+      "post": {
+        "summary": "Add or remove clips from a playlist.",
+        "description": "Wraps Suno's playlist clip update endpoint. Accepts either `metadata.clip_ids`, `clip_ids`, or `clip_id`.",
+        "tags": ["default"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["playlist_id"],
+                "properties": {
+                  "playlist_id": {
+                    "type": "string"
+                  },
+                  "update_type": {
+                    "type": "string",
+                    "enum": ["add", "remove"],
+                    "default": "add"
+                  },
+                  "clip_ids": {
+                    "oneOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "clip_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "success"
+          }
+        }
+      }
+    },
     "/api/move_clip": {
       "post": {
         "summary": "Move clips to a workspace.",

@@ -72,6 +72,34 @@ export interface InitializedUploadClipInfo {
   clip_id: string;
 }
 
+export interface PlaylistInfo {
+  id: string;
+  entity_type?: string;
+  image_url?: string;
+  playlist_clips?: any[];
+  current_page?: number;
+  num_total_results?: number;
+  is_owned?: boolean;
+  is_trashed?: boolean;
+  is_public?: boolean;
+  is_hidden?: boolean;
+  name: string;
+  description?: string;
+  upvote_count?: number;
+  dislike_count?: number;
+  flag_count?: number;
+  skip_count?: number;
+  play_count?: number;
+  song_count?: number;
+  is_discover_playlist?: boolean;
+}
+
+export interface PlaylistListResponse {
+  num_total_results: number;
+  current_page: number;
+  playlists: PlaylistInfo[];
+}
+
 export type AudioToAudioMode = 'cover' | 'add_vocals' | 'add_instrumental';
 
 interface PersonaResponse {
@@ -1177,6 +1205,93 @@ class SunoApi {
     );
 
     return response.data;
+  }
+
+  public async createPlaylistDraft(
+    name: string = 'Untitled'
+  ): Promise<PlaylistInfo> {
+    await this.keepAlive(false);
+    const response = await this.client.post(
+      `${SunoApi.BASE_URL}/api/playlist/create/`,
+      { name }
+    );
+
+    return response.data;
+  }
+
+  public async setPlaylistMetadata(payload: {
+    playlist_id: string;
+    name: string;
+    description?: string;
+  }): Promise<PlaylistInfo> {
+    await this.keepAlive(false);
+    const response = await this.client.post(
+      `${SunoApi.BASE_URL}/api/playlist/set_metadata`,
+      {
+        playlist_id: payload.playlist_id,
+        name: payload.name,
+        description: payload.description ?? ''
+      }
+    );
+
+    return response.data;
+  }
+
+  public async createPlaylist(
+    name: string,
+    description?: string
+  ): Promise<PlaylistInfo> {
+    const draft = await this.createPlaylistDraft('Untitled');
+    return this.setPlaylistMetadata({
+      playlist_id: draft.id,
+      name,
+      description
+    });
+  }
+
+  public async getMyPlaylists(
+    page: number = 1,
+    showTrashed: boolean = false,
+    showSharelist: boolean = false
+  ): Promise<PlaylistListResponse> {
+    await this.keepAlive(false);
+    const response = await this.client.get(
+      `${SunoApi.BASE_URL}/api/playlist/me?page=${page}&show_trashed=${String(showTrashed)}&show_sharelist=${String(showSharelist)}`
+    );
+
+    return response.data;
+  }
+
+  public async updatePlaylistClips(payload: {
+    playlist_id: string;
+    update_type?: 'add' | 'remove';
+    metadata: {
+      clip_ids: string[];
+    };
+    recommendation_metadata?: Record<string, any>;
+  }): Promise<{
+    playlist_id: string;
+    update_type: 'add' | 'remove';
+    clip_ids: string[];
+    success: true;
+  }> {
+    await this.keepAlive(false);
+    await this.client.post(
+      `${SunoApi.BASE_URL}/api/playlist/update_clips/`,
+      {
+        playlist_id: payload.playlist_id,
+        update_type: payload.update_type ?? 'add',
+        metadata: payload.metadata,
+        recommendation_metadata: payload.recommendation_metadata ?? {}
+      }
+    );
+
+    return {
+      playlist_id: payload.playlist_id,
+      update_type: payload.update_type ?? 'add',
+      clip_ids: payload.metadata.clip_ids,
+      success: true
+    };
   }
 
   public async uploadAudio(
