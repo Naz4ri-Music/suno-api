@@ -61,6 +61,18 @@ export type UploadFileWork = {
   };
 };
 
+type UploadFileQueuedJob = {
+  workId: string;
+  sunoCookie: string;
+  filePath: string;
+  filename: string;
+  contentType?: string;
+  workspaceId?: string;
+  workspaceName?: string;
+  title?: string;
+  imageUrl?: string;
+};
+
 const resolveWorkDir = () => {
   const configuredDir = process.env.UPLOAD_FILE_WORK_DIR?.trim();
   if (configuredDir)
@@ -70,6 +82,7 @@ const resolveWorkDir = () => {
 };
 
 const WORK_DIR = resolveWorkDir();
+const WORK_FILES_DIR = path.join(WORK_DIR, 'files');
 
 const WORKFLOW_STEPS: Array<Pick<UploadFileWorkStep, 'key' | 'label'>> = [
   { key: 'create_upload', label: 'Create upload task' },
@@ -84,11 +97,30 @@ const WORKFLOW_STEPS: Array<Pick<UploadFileWorkStep, 'key' | 'label'>> = [
 
 const nowIso = () => new Date().toISOString();
 
+const queueState = global as typeof global & {
+  __sunoUploadFileQueue?: {
+    jobs: Map<string, UploadFileQueuedJob>;
+    processing: boolean;
+    recoveryPromise?: Promise<void>;
+  };
+};
+
+const uploadQueue =
+  queueState.__sunoUploadFileQueue ||
+  {
+    jobs: new Map<string, UploadFileQueuedJob>(),
+    processing: false,
+    recoveryPromise: undefined
+  };
+
+queueState.__sunoUploadFileQueue = uploadQueue;
+
 const getWorkPath = (workId: string) =>
   path.join(WORK_DIR, `${workId}.json`);
 
 async function ensureWorkDir() {
   await fs.mkdir(WORK_DIR, { recursive: true });
+  await fs.mkdir(WORK_FILES_DIR, { recursive: true });
 }
 
 async function saveWork(work: UploadFileWork) {
@@ -196,6 +228,63 @@ export async function createUploadFileWork(
 
   await saveWork(work);
   return work;
+}
+
+async function markInterruptedWorks() {
+  await ensureWorkDir();
+
+  const entries = await fs.readdir(WORK_DIR, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith('.json'))
+      continue;
+
+    const workId = entry.name.replace(/\.json$/, '');
+    const work = await getUploadFileWork(workId);
+    if (!work || (work.status !== 'queued' && work.status !== 'running'))
+      continue;
+
+    const runningStep =
+      work.steps.find(step => step.status === 'running') ||
+      work.steps.find(step => step.status === 'pending');
+
+    work.status = 'failed';
+    work.updated_at = nowIso();
+    work.error = {
+      step: runningStep?.key || 'create_upload',
+      detail: {
+        message: 'Upload work interrupted by process restart before completion'
+      }
+    };
+
+    for (const step of work.steps) {
+      if (step.status === 'running') {
+        step.status = 'failed';
+        step.finished_at = nowIso();
+        step.error = {
+          message: 'Upload work interrupted by process restart'
+        };
+      } else if (step.status === 'pending') {
+        step.status = 'skipped';
+        step.finished_at = nowIso();
+        step.output = {
+          skipped: true,
+          reason: 'Upload work interrupted by process restart'
+        };
+      }
+    }
+
+    await saveWork(work);
+  }
+}
+
+async function ensureRecovery() {
+  if (!uploadQueue.recoveryPromise) {
+    uploadQueue.recoveryPromise = markInterruptedWorks().catch(error => {
+      console.error('Error recovering interrupted upload works:', error);
+    });
+  }
+
+  await uploadQueue.recoveryPromise;
 }
 
 async function runTrackedStep<T>(
@@ -372,4 +461,87 @@ export async function runUploadFileWorkflow({
       }
     });
   }
+}
+
+async function processUploadFileQueue() {
+  if (uploadQueue.processing)
+    return;
+
+  uploadQueue.processing = true;
+
+  try {
+    await ensureRecovery();
+
+    while (uploadQueue.jobs.size > 0) {
+      const nextEntry = uploadQueue.jobs.entries().next().value as
+        | [string, UploadFileQueuedJob]
+        | undefined;
+      if (!nextEntry)
+        break;
+
+      const [workId, job] = nextEntry;
+      uploadQueue.jobs.delete(workId);
+
+      try {
+        const fileBuffer = await fs.readFile(job.filePath);
+        await runUploadFileWorkflow({
+          workId: job.workId,
+          sunoCookie: job.sunoCookie,
+          fileBuffer,
+          filename: job.filename,
+          contentType: job.contentType,
+          workspaceId: job.workspaceId,
+          workspaceName: job.workspaceName,
+          title: job.title,
+          imageUrl: job.imageUrl
+        });
+      } catch (error: any) {
+        await setWorkState(job.workId, 'failed', {
+          error: {
+            step: 'upload_storage',
+            detail: buildErrorDetail(error)
+          }
+        });
+      } finally {
+        await fs.rm(job.filePath, { force: true }).catch(() => undefined);
+      }
+    }
+  } finally {
+    uploadQueue.processing = false;
+
+    if (uploadQueue.jobs.size > 0)
+      void processUploadFileQueue();
+  }
+}
+
+export async function enqueueUploadFileWork(job: {
+  workId: string;
+  sunoCookie: string;
+  fileBuffer: Buffer;
+  filename: string;
+  contentType?: string;
+  workspaceId?: string;
+  workspaceName?: string;
+  title?: string;
+  imageUrl?: string;
+}) {
+  await ensureRecovery();
+  await ensureWorkDir();
+
+  const filePath = path.join(job.workId.startsWith('.') ? WORK_FILES_DIR : WORK_FILES_DIR, `${job.workId}-${job.filename}`);
+  await fs.writeFile(filePath, job.fileBuffer);
+
+  uploadQueue.jobs.set(job.workId, {
+    workId: job.workId,
+    sunoCookie: job.sunoCookie,
+    filePath,
+    filename: job.filename,
+    contentType: job.contentType,
+    workspaceId: job.workspaceId,
+    workspaceName: job.workspaceName,
+    title: job.title,
+    imageUrl: job.imageUrl
+  });
+
+  void processUploadFileQueue();
 }
