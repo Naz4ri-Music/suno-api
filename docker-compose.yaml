@@ -1,0 +1,18 @@
+services:
+  suno-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_BASE_PATH: ''
+    restart: unless-stopped
+    ports:
+      - '${HOST_BIND_IP:-127.0.0.1}:${HOST_PORT:-18203}:3000'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    environment:
+      HOST: 0.0.0.0
+      PORT: '3000'
+      APP_BASE_PATH: ''
+      BROWSER: chromium
+      BROWSER_HEADLESS: 'true'
